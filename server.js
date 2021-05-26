@@ -58,7 +58,7 @@ const main = async () => {
 			return res.json({
 						name: result.name,
 						username: result.username,
-						entries: result.entries
+						entries: result.entries,
 						joined: result.joined
 					})
 		})

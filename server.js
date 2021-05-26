@@ -27,26 +27,40 @@ const main = async () => {
 
 	app.post('/register', (req,res) => {
 		const { username, name, password } = req.body;
-		const newUser = {
-			name: name,
-			username: username,
-			password: password,
-			entries: 0,
-			joined: new Date()
-		}
-		createUser(client, newUser)
-		.then(result => {
-			if (result) {
-				return res.json(newUser);
+		if(username === "" || password === "" || name === "" ) {
+			res.json("Error")
+		} else {
+			const newUser = {
+				name: name,
+				username: username,
+				password: password,
+				entries: 0,
+				joined: new Date()
 			}
-		})
+			createUser(client, newUser)
+			.then(result => {
+				if (result) {
+					return res.json({
+						name: name,
+						username: username,
+						entries: 0,
+						joined: new Date()						
+					});
+				}
+			})			
+		}
 	})
 
 	app.post('/signin', (req,res) => {
 		const { username, password } = req.body;
 		findOneUserByUsername(client, username, password)
 		.then(result => {
-			return res.json(result)
+			return res.json({
+						name: result.name,
+						username: result.username,
+						entries: result.entries
+						joined: result.joined
+					})
 		})
 	})
 

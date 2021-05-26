@@ -1,89 +1,119 @@
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 
 app.use(express.json());
 app.use(cors());
 
-const database = {
-	users: [
-		{
-			id: '123',
-			name: 'John Bull',
-			email: 'john@gmail.com',
-			password: 'cookies',
-			entries: 0,
-			joined: new Date()
-		},
-		{
-			id: '124',
-			name: 'Sally Paul',
-			email: 'sally@gmail.com',
-			password: 'bananas',
+const main = async () => {
+
+	const uri = "mongodb+srv://Mankind:sohibulfay@facerecognition.nrq0k.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
+
+	const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+ 
+    // Connect to the MongoDB cluster
+    await client.connect();
+ 
+    // Make the appropriate DB calls
+
+	app.get('/', (req,res) => {
+		findAll(client)
+		.then(result => res.json(result))
+		.catch(err => console.error(err))
+	})
+
+	app.post('/register', (req,res) => {
+		const { username, name, password } = req.body;
+		const newUser = {
+			name: name,
+			username: username,
+			password: password,
 			entries: 0,
 			joined: new Date()
 		}
-	]
+		createUser(client, newUser)
+		.then(result => {
+			if (result) {
+				return res.json(newUser);
+			}
+		})
+	})
+
+	app.post('/signin', (req,res) => {
+		const { username, password } = req.body;
+		findOneUserByUsername(client, username, password)
+		.then(result => {
+			return res.json(result)
+		})
+	})
+
+	app.put('/imageEntry', (req, res) => {
+		const { username } = req.body;
+		let found = false;
+		updateEntriesByUsername(client, username)
+		.then(result => {
+			getIndexByEntries(client, result)
+			.then(count => {
+				res.json({entries: result, rank: count})
+			})
+		})
+	})
 }
 
-app.get('/', (req,res) => {
-	res.json(database.users);
-})
+main().catch(console.error)
 
-app.post('/signin', (req,res) => {
-	const { email, password } = req.body;
- 	database.users.filter(user => {
-		if(email === user.email && password === user.password) {
-			return res.json(user);
-		}
-	})
-	res.status(400).json('signin failure');
-})
+const createUser = async (client, newUser) => {
+    const result = await client.db("users").collection("data").insertOne(newUser);
+    if (result) {
+        return `New user created with the following id: ${result.insertedId}`;
+    } else {
+        return false;
+    }
+}
 
-app.post('/register', (req,res) => {
-	const { email, name, password } = req.body;
-	const newUser = {
-		id: '1234', //Should probably use UUID instead
-		name: name,
-		email: email,
-		password: password,
-		entries: 0,
-		joined: new Date()
-	}
-	database.users.push(newUser);
-	res.json(newUser);
-})
+const findAll = async (client) => {
+    const result = await client.db("users").collection("data").find({}).toArray();
+    if (result) {
+        return result;
+    } else {
+        return `No users found`;
+    }
+}
 
-app.post('/profile/:id', (req,res) => {
-	const { id } = req.params;
-	let found = false;
- 	database.users.filter(user => {
-		if(id === user.id) {
-			found = true;
-			return res.json(user);
-		}
-	})
-	if(!found){
-		res.status(404).json('User Not Found!');
-	}
-})
+const findOneUserByUsername = async (client, usernameOfUser, passwordOfUser) => {
+    const result = await client.db("users").collection("data").findOne({ username: usernameOfUser, password: passwordOfUser });
+    if (result) {
+        return result;
+    } else {
+        return `Username/Password incorrect`;
+    }
+}
 
-app.put('/imageEntry', (req, res) => {
-	const { id } = req.body;
-	let found = false;
- 	database.users.filter(user => {
-		if(id === user.id) {
-			found = true;
-			user.entries++
-			return res.json(user.entries);
-		}
-	})
-	if(!found){
-		return res.status(404).json('User Not Found!');
-	}
-})
+const updateEntriesByUsername = async (client, usernameOfUser) => {
+    const result = await client.db("users").collection("data")
+                        .updateOne({ username: usernameOfUser }, { $inc: {entries: 1} });
+    if (result) {
+    	const user = await client.db("users").collection("data").findOne({ username: usernameOfUser });
+	    if (user) {
+	        return user.entries;
+	    }
+    } else {
+    	return "Could not update entries count"
+    }
+}
 
+const getIndexByEntries = async (client, entriesOfUser) => {
+    const result = await client.db("users").collection("data")
+    					.find({entries: { $gt : entriesOfUser }}).count() + 1;
+    if (result) {
+    	return result;
+    } else {
+    	return "Could not count"
+    }
+}
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server currently running on http://localhost:${PORT}`));

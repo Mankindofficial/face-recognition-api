@@ -55,12 +55,16 @@ const main = async () => {
 		const { username, password } = req.body;
 		findOneUserByUsername(client, username, password)
 		.then(result => {
-			return res.json({
-						name: result.name,
-						username: result.username,
-						entries: result.entries,
-						joined: result.joined
-					})
+			if(result.name) {
+				return res.json({
+							name: result.name,
+							username: result.username,
+							entries: result.entries,
+							joined: result.joined
+						})				
+			} else {
+				return "Username/Password incorrect"
+			}
 		})
 	})
 

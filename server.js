@@ -63,7 +63,7 @@ const main = async () => {
 							joined: result.joined
 						})				
 			} else {
-				return "Username/Password incorrect"
+				return result
 			}
 		})
 	})

@@ -21,7 +21,7 @@ const main = async () => {
 
 	app.get('/', (req,res) => {
 		findAll(client)
-		.then(result => res.json(result))
+		.then(result => res.json("All set"))
 		.catch(err => console.error(err))
 	})
 
